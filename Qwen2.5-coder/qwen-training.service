@@ -1,0 +1,18 @@
+[Unit]
+Description=Run Qwen2.5-Coder Training Script on Boot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/Qwen2.5-coder/scripts
+# 태그 인식을 위한 환경 변수 설정
+Environment="TOKENIZERS_PARALLELISM=false"
+Environment="WANDB_DISABLED=true"
+# 학습 모드는 training_config.env 파일에서 자동으로 가져옴
+ExecStart=/home/ubuntu/Qwen2.5-coder/scripts/run_training.sh
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target

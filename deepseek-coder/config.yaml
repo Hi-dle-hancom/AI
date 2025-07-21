@@ -1,0 +1,58 @@
+# DeepSeek-Coder 6.7B Instruct T4 환경 최적화 설정
+model_name: "/home/ubuntu/deepseek-coder/model_cache/deepseek-coder-6.7b-instruct"  # instruct 모델 사용
+data_path: "/home/ubuntu/deepseek-coder/data/train.jsonl"
+
+# T4 최적화 학습 하이퍼파라미터
+learning_rate: 2e-4
+batch_size: 4  # 더 효율적인 학습을 위해 배치 크기 증가
+grad_acc: 2  # 배치 크기가 증가함에 따라 그래디언트 어큐뮬레이션을 조정 (총 교육량 유지)
+max_length: 1024
+num_epochs: 3
+lr_scheduler: "cosine"
+warmup_ratio: 0.1
+weight_decay: 0.01
+
+# T4 호환 최적화 설정
+fp16: true
+bf16: false
+gradient_checkpointing: true
+torch_dtype: "float16"
+
+# 출력 및 저장 설정
+output_dir: "/home/ubuntu/deepseek-coder/scripts/checkpoints/prompt-finetuned/"
+save_steps: 10    # 10에서 500으로 증가 - I/O 부하 및 tqdm 진행바 문제 감소
+eval_steps: 50    # 50에서 200으로 증가 - 평가 빈도 최적화
+logging_steps: 5  # 5에서 50으로 증가 - 로그 출력 빈도 감소로 진행바 안정화
+save_total_limit: 3
+evaluation_strategy: "steps"
+save_strategy: "steps"
+load_best_model_at_end: true
+metric_for_best_model: "eval_loss"
+
+# 커스텀 체크포인트 설정
+# checkpoint_freq: 500  # SpotInterruptionHandler의 체크포인트 저장 주기(500 스텝마다 저장)
+greater_is_better: false
+
+# 데이터 처리 설정
+dataloader_num_workers: 4
+remove_unused_columns: false
+
+# SFT 트레이너 설정
+use_sft_trainer: true
+
+# LoRA 설정
+use_lora: true
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.1
+lora_target_modules: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+
+# 4비트 양자화 설정 (T4 최적화)
+load_in_4bit: true
+bnb_4bit_compute_dtype: "float16"
+bnb_4bit_quant_type: "nf4"
+bnb_4bit_use_double_quant: true
+
+# 추가 설정
+max_steps: -1
+report_to: null

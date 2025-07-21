@@ -1,0 +1,72 @@
+# DeepSeek-Coder 6.7B Instruct A10G 22GB 환경 최적화 설정
+model_name: "/home/ubuntu/deepseek-coder/model_cache/deepseek-coder-6.7b-instruct"  # instruct 모델 사용
+data_path: "/home/ubuntu/deepseek-continual/data/train.jsonl"
+
+# ----- hardware ----- (Critical Issue #3 해결: A10G 22GB 최적화)
+batch_size: 2                  # 배치 크기 2로 설정 (BatchNorm/LayerNorm 안정성)
+gradient_accumulation_steps: 8  # 그래디언트 누적 스텝 8로 조정 (유효 배치 16 유지)
+gpu_memory_fraction: 0.75       # GPU 메모리 사용 상한 75%로 제한
+
+# ----- training ----- (메모리 최적화)
+learning_rate: 1e-4            # 작은 배치에 맞게 LR 감소
+max_length: 512                # 시퀀스 길이 단축 (메모리 절약)
+num_epochs: 3
+lr_scheduler: "cosine"
+warmup_ratio: 0.05             # 워밍업 비율 감소
+weight_decay: 0.01
+grad_clip: 1.0                 # 그래디언트 클리핑 추가
+
+# ----- 메모리 최적화 설정 -----
+use_amp: true                  # 혼합 정밀도 학습
+use_gradient_checkpointing: true  # 그래디언트 체크포인팅
+adam_accumulation: true        # AdamA 활성화
+
+# ----- DataLoader 최적화 -----
+dataloader_num_workers: 0      # 메모리 절약을 위해 0으로 설정
+pin_memory: false              # GPU 메모리 절약을 위해 비활성화
+prefetch_factor: 2             # 메모리 사용량 최소화
+
+# ----- 호환성 설정 -----
+fp16: true
+bf16: false
+gradient_checkpointing: true  # transformers 호환성 유지
+torch_dtype: "float16"
+
+# 출력 및 저장 설정
+output_dir: "/home/ubuntu/deepseek-continual/scripts/checkpoints/comment-finetuned/"
+save_steps: 10    # 10에서 500으로 증가 - I/O 부하 및 tqdm 진행바 문제 감소
+eval_steps: 50    # 50에서 200으로 증가 - 평가 빈도 최적화
+logging_steps: 5  # 5에서 50으로 증가 - 로그 출력 빈도 감소로 진행바 안정화
+save_total_limit: 3
+evaluation_strategy: "steps"
+save_strategy: "steps"
+load_best_model_at_end: true
+metric_for_best_model: "eval_loss"
+
+# 커스텀 체크포인트 설정
+# checkpoint_freq: 500  # SpotInterruptionHandler의 체크포인트 저장 주기(500 스텝마다 저장)
+greater_is_better: false
+
+# 데이터 처리 설정
+dataloader_num_workers: 4
+remove_unused_columns: false
+
+# SFT 트레이너 설정
+use_sft_trainer: true
+
+# LoRA 설정
+use_lora: true
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.1
+lora_target_modules: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+
+# 4비트 양자화 설정 (T4 최적화)
+load_in_4bit: true
+bnb_4bit_compute_dtype: "float16"
+bnb_4bit_quant_type: "nf4"
+bnb_4bit_use_double_quant: true
+
+# 추가 설정
+max_steps: -1
+report_to: null

@@ -1,0 +1,84 @@
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyTorch
+*.pth
+*.pt
+*.bin
+*.safetensors
+
+# Checkpoints and logs
+checkpoints/
+logs/
+wandb/
+tensorboard_logs/
+*.log
+
+# Environment variables
+.env
+*.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Model files (large files)
+models/
+*.model
+*.pkl
+*.pickle
+
+# Data files
+data/
+datasets/
+*.csv
+*.json
+*.jsonl
+*.txt
+*.parquet
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
