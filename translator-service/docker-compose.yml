@@ -1,0 +1,63 @@
+# vllm-lara-server/docker-compose.yml
+
+services:
+  # 기존 vLLM 서비스
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app
+      - /home/ubuntu/.cache/huggingface:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    ipc: host
+    environment:
+      # 필요시 환경 변수 추가
+      - NVIDIA_VISIBLE_DEVICES=all
+
+  # --- ✨ 새로 추가된 번역 서비스 ✨ ---
+  translator:
+    build:
+      context: ../translator-service  # 상위 디렉토리의 translator-service 참조
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    volumes:
+      - /home/ubuntu/.cache/huggingface:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    ipc: host
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+
+  # 기존 prometheus 및 grafana 서비스 (수정 없음)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana:/var/lib/grafana

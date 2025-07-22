@@ -21,6 +21,16 @@ DeepSeek 지속학습(Continual Learning) 파이프라인
 ### 3. Qwen2.5-coder/
 Qwen2.5-Coder 모델 관련 스크립트
 
+### 4. translator-service/
+Qwen2.5-Coder 기반 한영 번역 서비스
+- **FastAPI 기반 RESTful API**
+- **4-bit 양자화를 통한 메모리 효율성**
+- **Docker 컨테이너화 지원**
+- **독립 실행용 Docker 파일들**
+  - `Dockerfile`: 번역 서비스 단독 실행용
+  - `docker-compose.yml`: 번역 서비스 독립 실행 환경
+  - **주의**: 이 Docker 파일들은 translator-service를 **별도로 실행**할 때 사용하는 것입니다
+
 ## 주요 특징
 
 ### AWS 스팟 인스턴스 지원
