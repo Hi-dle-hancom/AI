@@ -2594,12 +2594,23 @@ class ContinualLearner:
         logger.update_step(self.global_step)
         
         # MER 메모리 업데이트 - batch_data를 사용 (안전하게 체크)
-        if hasattr(self, 'mer') and self.mer is not None and batch_data is not None:
+        if hasattr(self, 'mer') and self.mer is not None and hasattr(self, 'batch_data'):
             try:
-                # batch_data에는 입력 데이터와 레이블이 모두 포함될 수 있음
-                self.mer.reservoir_sampling(batch_data, None)  # target은 batch_data에 포함되어 있을 수 있음
+                # 텐서 차원 안전 체크
+                batch_data = self.batch_data
+                if hasattr(batch_data, 'shape') and len(batch_data.shape) > 1:
+                    # 배치 차원이 있는 경우 첫 번째 샘플만 사용
+                    sample_data = batch_data[0] if batch_data.shape[0] > 1 else batch_data.squeeze(0)
+                    sample_target = target[0] if hasattr(target, 'shape') and target.shape[0] > 1 else target
+                    self.mer.reservoir_sampling(sample_data, sample_target)
+                else:
+                    self.mer.reservoir_sampling(batch_data, target)
             except Exception as mer_error:
-                logger.error(f"MER 메모리 업데이트 실패: {mer_error}")
+                error_msg = str(mer_error)
+                if "Scalar" in error_msg or "cannot be converted" in error_msg:
+                    logger.debug(f"MER 텐서 차원 오류 (무시): {error_msg}")
+                else:
+                    logger.error(f"MER 메모리 업데이트 실패: {error_msg}")
         
         # 실패한 경우 기본값 반환
         return 0.0, 0.0  # 손실값과 정확도에 기본값 반환
@@ -3018,9 +3029,21 @@ class ContinualLearner:
         # MER 메모리 업데이트 (그래디언트 누적이 완료된 경우에만)
         if hasattr(self, 'mer') and self.mer is not None:
             try:
-                self.mer.reservoir_sampling(data, target)
+                # 텐서 차원 안전 체크
+                if hasattr(data, 'shape') and len(data.shape) > 1:
+                    # 배치 차원이 있는 경우 첫 번째 샘플만 사용
+                    sample_data = data[0] if data.shape[0] > 1 else data.squeeze(0)
+                    sample_target = target[0] if hasattr(target, 'shape') and target.shape[0] > 1 else target
+                    self.mer.reservoir_sampling(sample_data, sample_target)
+                else:
+                    self.mer.reservoir_sampling(data, target)
             except Exception as e:
-                logger.warning(f"MER 메모리 업데이트 오류: {e}")
+                # 상세한 오류 정보 로깅 (디버깅용)
+                error_msg = str(e)
+                if "Scalar" in error_msg or "cannot be converted" in error_msg:
+                    logger.debug(f"MER 텐서 차원 오류 (무시): {error_msg}")
+                else:
+                    logger.warning(f"MER 메모리 업데이트 오류: {error_msg}")
         
         # 로거 업데이트
         if hasattr(logger, 'update_step'):
@@ -3313,13 +3336,16 @@ class ContinualLearner:
             # 5. 중복 데이터 제거 및 최소한의 필수 정보만 포함하는 state_dict 구성
             # 특히 과도한 중복 정보를 제거하여 체크포인트 크기 최적화
             
+            # 타임스탬프 생성
+            import time
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            
             # 핵심 학습 상태 메타데이터만 유지 (중복 없이)
             metadata = {
                 'global_step': self.global_step,
                 'current_mode': self.current_mode,
                 'completed_modes': list(set([self.current_mode] + (self.completed_modes if hasattr(self, 'completed_modes') else [])))
             }
-            
             # 모델과 옵티마이저는 개별적으로 저장할 것이므로 state_dict에서 제외
             # 이 부분은 절대로 중복 저장하지 않도록 함
             state_dict = {
@@ -3648,12 +3674,12 @@ class ContinualLearner:
                         checkpoint_files.append((file_path, os.path.getmtime(file_path)))
                 
                 # 최신 체크포인트를 제외한 과거 체크포인트 정리
-                if len(checkpoint_files) > 3:  # 최신 3개 유지
+                if len(checkpoint_files) > 5:  # 최신 5개 유지 (안정성 향상)
                     # 시간 순으로 정렬 (최신 것이 마지막에 오게)
                     checkpoint_files.sort(key=lambda x: x[1])  
                     
-                    # 최신 3개를 제외한 나머지 삭제
-                    files_to_remove = checkpoint_files[:-3]
+                    # 최신 5개를 제외한 나머지 삭제
+                    files_to_remove = checkpoint_files[:-5]
                     for file_path, _ in files_to_remove:
                         try:
                             os.remove(file_path)
@@ -3880,7 +3906,7 @@ def load_dataset_and_tokenize(train_path, tokenizer, config, overwrite_cache=Fal
     logger.info(f"감지된 데이터 형식: {data_format}")
     
     # 최대 토큰 길이 설정 (설정 파일에서 읽기)
-    max_length = config.get('max_length', 1024)
+    max_length = config.get('max_length', 512)
     
     # 데이터셋 로드
     raw_dataset = load_dataset(
@@ -4440,7 +4466,7 @@ def main():
         logger.info(f"모든 학습 완료 - 모드: {args.mode}")
         
         # 최대 길이 설정
-        max_length = config.get('max_length', 1024)
+        max_length = config.get('max_length', 512)
         
         # 데이터 형식을 자동으로 감지하는 함수 추가
         def detect_format(example):
