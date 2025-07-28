@@ -223,13 +223,14 @@ class ModelBuilder:
             
             # AdamA 사용 시도 (실패 시 AdamW 사용)
             optimizer_name = self.config.get('optimizer', 'adamw')
-            learning_rate = self.config.get('learning_rate', 1e-4)
-            weight_decay = self.config.get('weight_decay', 0.01)
+            learning_rate = float(self.config.get('learning_rate', 1e-4))
+            weight_decay = float(self.config.get('weight_decay', 0.01))
+            
+            logger.info(f"옵티마이저 설정: {optimizer_name}, LR: {learning_rate}, WD: {weight_decay}")
             
             if optimizer_name.lower() == 'adama' and self.config.get('adam_accumulation', False):
                 try:
-                    # AdamA 시도
-                    from torch.optim import AdamW
+                    # AdamA 시도 (현재는 AdamW로 대체)
                     optimizer = AdamW(
                         trainable_params,
                         lr=learning_rate,
@@ -237,15 +238,15 @@ class ModelBuilder:
                         betas=(0.9, 0.999),
                         eps=1e-8
                     )
-                    logger.info("AdamA 옵티마이저 생성 완료")
-                except ImportError:
+                    logger.info("AdamA 모드 AdamW 옵티마이저 생성 완료")
+                except Exception as e:
                     # AdamW로 폴백
                     optimizer = AdamW(
                         trainable_params,
                         lr=learning_rate,
                         weight_decay=weight_decay
                     )
-                    logger.info("AdamW 옵티마이저 생성 완료 (AdamA 폴백)")
+                    logger.info(f"AdamW 옵티마이저 생성 완료 (AdamA 폴백: {e})")
             else:
                 # 기본 AdamW
                 optimizer = AdamW(
@@ -273,8 +274,10 @@ class ModelBuilder:
         """
         try:
             scheduler_type = self.config.get('lr_scheduler', 'cosine')
-            warmup_ratio = self.config.get('warmup_ratio', 0.05)
+            warmup_ratio = float(self.config.get('warmup_ratio', 0.05))
             num_warmup_steps = int(num_training_steps * warmup_ratio)
+            
+            logger.info(f"스케줄러 설정: {scheduler_type}, 워밍업 비율: {warmup_ratio}")
             
             scheduler = get_scheduler(
                 name=scheduler_type,

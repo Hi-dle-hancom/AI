@@ -1,6 +1,6 @@
 # DeepSeek-Coder 6.7B Instruct A10G 22GB 환경 최적화 설정
 model_name: "/home/ubuntu/deepseek-coder/model_cache/deepseek-coder-6.7b-instruct"  # instruct 모델 사용
-data_path: "/home/ubuntu/deepseek-continual/data/train.jsonl"
+data_path: "/home/ubuntu/deepseek-continual/data"  # 디렉토리 경로로 변경 (다중 파일 지원)
 
 # ----- hardware ----- (Critical Issue #3 해결: A10G 22GB 최적화)
 batch_size: 2                  # 배치 크기 2로 설정 (BatchNorm/LayerNorm 안정성)
@@ -34,6 +34,7 @@ torch_dtype: "float16"
 
 # 출력 및 저장 설정
 output_dir: "/home/ubuntu/deepseek-continual/scripts/checkpoints/comment-finetuned/"
+checkpoint_dir: "/home/ubuntu/deepseek-continual/scripts/checkpoints"  # 체크포인트 디렉토리
 save_steps: 500   # 500스텝마다 저장 - I/O 부하 감소 및 안정성 향상
 eval_steps: 50    # 50에서 200으로 증가 - 평가 빈도 최적화
 logging_steps: 5  # 5에서 50으로 증가 - 로그 출력 빈도 감소로 진행바 안정화

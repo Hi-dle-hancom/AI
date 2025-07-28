@@ -9,6 +9,8 @@
 
 import os
 import json
+import glob
+import re
 import logging
 from typing import Dict, Any, List, Optional, Tuple
 from datasets import Dataset, load_dataset
@@ -33,6 +35,67 @@ class DatasetProcessor:
         self.num_proc = config.get('dataloader_num_workers', 4)
         
         logger.info(f"데이터셋 프로세서 초기화 완료 (max_length: {self.max_length})")
+    
+    def find_training_files(self, data_path: str, data_file: str = None) -> List[str]:
+        """훈련 데이터 파일들 찾기
+        
+        Args:
+            data_path: 데이터 디렉토리 경로
+            data_file: 특정 데이터 파일명 (선택사항)
+            
+        Returns:
+            List[str]: 훈련 데이터 파일 경로 리스트
+        """
+        try:
+            if data_file:
+                # 명시적으로 지정된 파일 사용
+                if os.path.isabs(data_file):
+                    return [data_file]
+                else:
+                    return [os.path.join(data_path, data_file)]
+            
+            # 디렉토리에서 train*.jsonl 패턴의 파일 찾기
+            if os.path.isfile(data_path):
+                # data_path가 파일인 경우
+                return [data_path]
+            
+            if not os.path.isdir(data_path):
+                logger.error(f"데이터 경로가 존재하지 않습니다: {data_path}")
+                return []
+            
+            # 파일 목록 가져오기
+            pattern = os.path.join(data_path, 'train*.jsonl')
+            all_files = glob.glob(pattern)
+            
+            if not all_files:
+                # train*.jsonl이 없으면 train.jsonl 찾기
+                train_file = os.path.join(data_path, 'train.jsonl')
+                if os.path.exists(train_file):
+                    all_files = [train_file]
+            
+            if not all_files:
+                logger.error(f"훈련 데이터 파일을 찾을 수 없습니다: {pattern}")
+                return []
+            
+            # 파일명에서 숫자를 추출하여 정렬 (train1.jsonl, train2.jsonl, ...)
+            def extract_number(filename):
+                match = re.search(r'train(\d+)\.jsonl$', os.path.basename(filename))
+                if match:
+                    return int(match.group(1))
+                # train.jsonl 같은 경우는 0으로 처리
+                if os.path.basename(filename) == 'train.jsonl':
+                    return 0
+                return float('inf')  # 숫자가 없는 경우 맨 뒤로 정렬
+            
+            # 숫자 순서대로 정렬
+            data_files = sorted(all_files, key=extract_number)
+            
+            logger.info(f"다음 순서로 데이터 파일을 처리합니다: {[os.path.basename(f) for f in data_files]}")
+            return data_files
+            
+        except Exception as e:
+            logger.error(f"훈련 파일 찾기 실패: {e}")
+            return []
     
     def detect_data_format(self, data_path: str) -> str:
         """데이터 형식 자동 감지"""
